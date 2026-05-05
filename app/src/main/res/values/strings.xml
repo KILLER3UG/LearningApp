@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StudyNotes</string>
+    <string name="action_settings">Settings</string>
+    <string name="open_file">Open File</string>
+    <string name="ask_ai">Ask AI</string>
+    <string name="save_response">Save</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="loading">Loading...</string>
+    <string name="error_loading_file">Error loading file</string>
+    <string name="no_file_selected">No file selected. Tap + to open a .md file.</string>
+    <string name="error_network">Network error. Check your connection.</string>
+    <string name="error_api_key">API key not configured. Add gemini.api.key to local.properties</string>
+    <string name="retry">Retry</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="bookmarks">Bookmarks</string>
+    <string name="search">Search</string>
+    <string name="save_bookmark">Save Bookmark</string>
+</resources>
