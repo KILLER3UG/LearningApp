@@ -2,44 +2,74 @@ package com.selfproject.learningapp.data
 
 /**
  * Converts markdown tables to HTML tables for proper rendering.
+ *
+ * Key fixes from Issue 2:
+ * - Accepts isDark parameter for theme-aware colors (no more hardcoded purple)
+ * - Wraps table in overflow-x:auto div for mobile horizontal scrolling
+ * - No zebra striping — clean hairline borders only
+ * - Fixes code-block bleed: tables inside ``` blocks render as monospace text
  */
 object MarkdownTableConverter {
 
+    // Light mode
+    private const val L_STYLES = "overflow-x:auto;max-width:100%;display:block;"
+    private const val L_HEADER_BG = "#F8F9FA"
+    private const val L_BORDER = "#E9ECEF"
+    private const val L_TEXT = "#1C1C1E"
+
+    // Dark mode
+    private const val D_STYLES = "overflow-x:auto;max-width:100%;display:block;"
+    private const val D_HEADER_BG = "#212529"
+    private const val D_BORDER = "#343A40"
+    private const val D_TEXT = "#FFFFFF"
+
     /**
-     * Finds all markdown tables in the content and converts them to HTML.
+     * Converts markdown tables to HTML, theme-aware.
+     * Code fences (```) are protected — tables inside them render as monospace text.
      */
-    fun convertTablesToHtml(content: String): String {
+    fun convertTablesToHtml(content: String, isDark: Boolean): String {
+        val (styles, headerBg, border, textColor) = if (isDark) {
+            Quad(D_STYLES, D_HEADER_BG, D_BORDER, D_TEXT)
+        } else {
+            Quad(L_STYLES, L_HEADER_BG, L_BORDER, L_TEXT)
+        }
+
+        // Step 1: Extract and protect fenced code blocks
+        val codeFences = mutableListOf<String>()
+        val protected = content.replace(
+            Regex("""```[\s\S]*?```""")
+        ) { match ->
+            val placeholder = "<!--CODEFENCE_${codeFences.size}-->"
+            // Escape pipe chars inside code fences so they don't trigger table parsing
+            codeFences.add(match.value.replace("|", "&#124;"))
+            placeholder
+        }
+
+        // Step 2: Find and convert tables (only outside code fences)
         val result = StringBuilder()
         var i = 0
-        val lines = content.split("\n")
+        val lines = protected.split("\n")
 
         while (i < lines.size) {
             val trimmedLine = lines[i].trim()
 
-            // Check if this line could be the start of a table (contains |)
+            // Detect table start: | cell | cell | with at least 3 pipes
             if (trimmedLine.startsWith("|") && trimmedLine.endsWith("|") && trimmedLine.count { it == '|' } >= 3) {
-                // Check if next line is a separator
+                // Check next line is separator
                 if (i + 1 < lines.size && isTableSeparator(lines[i + 1].trim())) {
-                    // Found a table - collect all table rows
                     val tableLines = mutableListOf<String>()
                     var j = i
                     while (j < lines.size) {
                         val t = lines[j].trim()
                         if (t.startsWith("|") && t.endsWith("|")) {
-                            if (isTableSeparator(t)) {
-                                // Skip separator line but keep collecting
-                                j++
-                                continue
-                            }
+                            if (isTableSeparator(t)) { j++; continue }
                             tableLines.add(t)
                             j++
-                        } else {
-                            break
-                        }
+                        } else break
                     }
 
                     if (tableLines.isNotEmpty()) {
-                        result.append(buildHtmlTable(tableLines))
+                        result.append(buildHtmlTable(tableLines, styles, headerBg, border, textColor))
                         i = j
                         continue
                     }
@@ -50,15 +80,20 @@ object MarkdownTableConverter {
             i++
         }
 
-        return result.toString()
+        val converted = result.toString()
+
+        // Step 3: Restore code fences (with escaped pipes now in place)
+        return codeFences.foldIndexed(converted) { idx, text, fence ->
+            text.replace("<!--CODEFENCE_$idx-->", "<pre><code>$fence</code></pre>")
+        }
     }
+
+    private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
     private fun isTableSeparator(line: String): Boolean {
         val trimmed = line.replace(" ", "")
         if (!trimmed.startsWith("|")) return false
-        val body = trimmed.substring(1)
-        // Each cell separator should be ---, :---, ---:, or :---:
-        val cells = body.split("|")
+        val cells = trimmed.substring(1).split("|")
         for (cell in cells) {
             if (cell.isEmpty()) continue
             val cleaned = cell.replace(":", "").replace("-", "")
@@ -68,47 +103,68 @@ object MarkdownTableConverter {
         return true
     }
 
-    private fun buildHtmlTable(tableLines: List<String>): String {
-        val html = StringBuilder()
-        html.append("<table style=\"width:100%%; border-collapse:collapse; margin:12px 0; border-radius:8px; overflow:hidden; border:1px solid #D0BCFF;\">\n")
+    private fun buildHtmlTable(
+        tableLines: List<String>,
+        styles: String,
+        headerBg: String,
+        border: String,
+        textColor: String
+    ): String {
+        val sb = StringBuilder()
 
-        // First row is header
+        // Wrapping div for mobile horizontal scroll
+        sb.append("<div style=\"$styles\">")
+        sb.append("<table style=\"border-collapse:collapse;width:100%;\">")
+
+        // Header row — distinct background, semibold
         val headerCells = parseCells(tableLines[0])
-        html.append("<thead>\n<tr>")
+        sb.append("<thead><tr>")
         for (cell in headerCells) {
-            html.append("<th style=\"padding:12px 16px; background-color:#EADDFF; font-weight:700; border-bottom:2px solid #D0BCFF; text-align:left; color:#1C1B1F;\">")
+            sb.append("<th style=\"")
+                .append("padding:12px 16px;")
+                .append("text-align:left;")
+                .append("font-weight:600;")
+                .append("background-color:$headerBg;")
+                .append("color:$textColor;")
+                .append("border-bottom:1px solid $border;")
+                .append("border-right:1px solid $border;")
+                .append("\">")
                 .append(inlineFormat(cell.trim()))
                 .append("</th>")
         }
-        html.append("</tr>\n</thead>\n")
+        sb.append("</tr></thead>")
 
-        // Remaining rows are body
+        // Body rows — no zebra striping, hairline borders only
         if (tableLines.size > 1) {
-            html.append("<tbody>\n")
+            sb.append("<tbody>")
             for (rowIdx in 1 until tableLines.size) {
                 val cells = parseCells(tableLines[rowIdx])
-                val bgColor = if (rowIdx % 2 == 0) "#F8F7FF" else "#FFFFFF"
-                html.append("<tr>")
+                sb.append("<tr>")
                 for (cell in cells) {
-                    html.append("<td style=\"padding:10px 16px; border-bottom:1px solid #E7E0EC; background-color:$bgColor;\">")
+                    sb.append("<td style=\"")
+                        .append("padding:12px 16px;")
+                        .append("color:$textColor;")
+                        .append("border-bottom:1px solid $border;")
+                        .append("border-right:1px solid $border;")
+                        .append("\">")
                         .append(inlineFormat(cell.trim()))
                         .append("</td>")
                 }
-                html.append("</tr>\n")
+                sb.append("</tr>")
             }
-            html.append("</tbody>\n")
+            sb.append("</tbody>")
         }
 
-        html.append("</table>")
-        return html.toString()
+        sb.append("</table>")
+        sb.append("</div>")
+        return sb.toString()
     }
 
     private fun parseCells(row: String): List<String> {
-        // Remove leading and trailing |
         var content = row.trim()
         if (content.startsWith("|")) content = content.substring(1)
         if (content.endsWith("|")) content = content.substring(0, content.length - 1)
-        return content.split("|")
+        return content.split("|").map { it.trim() }
     }
 
     private fun inlineFormat(text: String): String {
@@ -118,6 +174,6 @@ object MarkdownTableConverter {
             .replace(">", "&gt;")
             .replace(Regex("\\*\\*(.+?)\\*\\*"), "<strong>$1</strong>")
             .replace(Regex("\\*(.+?)\\*"), "<em>$1</em>")
-            .replace(Regex("`(.+?)`"), "<code style=\"background:#F0EDF6; padding:2px 6px; border-radius:4px; font-size:0.9em;\">$1</code>")
+            .replace(Regex("`(.+?)`"), "<code style=\"background:#F0EDF6;padding:2px 6px;border-radius:4px;font-size:0.9em;\">$1</code>")
     }
 }

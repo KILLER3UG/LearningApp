@@ -1,11 +1,19 @@
 package com.selfproject.learningapp.data
 
 import android.content.Context
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import com.selfproject.learningapp.data.local.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import com.selfproject.learningapp.model.Note
 
 /**
- * Repository for study-related data: bookmarks, flashcards, quizzes.
+ * Repository for study-related data: bookmarks, flashcards, quizzes, notes, attachments.
  */
 class StudyRepository(context: Context) {
 
@@ -13,6 +21,29 @@ class StudyRepository(context: Context) {
     private val bookmarkDao = db.bookmarkDao()
     private val flashcardDao = db.flashcardDao()
     private val quizDao = db.quizDao()
+    private val noteAttachmentDao = db.noteAttachmentDao()
+
+    // Notes
+    private val _allNotes = MutableStateFlow<List<com.selfproject.learningapp.model.Note>>(emptyList())
+    val allNotes: StateFlow<List<com.selfproject.learningapp.model.Note>> = _allNotes
+
+    suspend fun updateNote(note: com.selfproject.learningapp.model.Note) {
+        // Update in-memory cache
+        _allNotes.value = _allNotes.value.map { if (it.id == note.id) note else it }
+    }
+
+    suspend fun deleteNote(note: com.selfproject.learningapp.model.Note) {
+        _allNotes.value = _allNotes.value.filter { it.id != note.id }
+    }
+
+    fun addOrUpdateNote(note: com.selfproject.learningapp.model.Note) {
+        val existing = _allNotes.value.find { it.id == note.id }
+        if (existing != null) {
+            _allNotes.value = _allNotes.value.map { if (it.id == note.id) note else it }
+        } else {
+            _allNotes.value = _allNotes.value + note
+        }
+    }
 
     // Bookmarks
     fun getBookmarks(documentUri: String): Flow<List<BookmarkEntity>> =

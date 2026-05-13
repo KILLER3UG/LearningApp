@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(C:/Users/rober/LocalFolders/SelfProject/LearningApp/gradlew.bat assembleDebug --no-daemon)",
+      "Bash(ls compile_output.txt)",
+      "Bash(wc -l compile_output.txt)",
+      "Bash(gradlew.bat compileDebugKotlin)",
+      "Bash(cmd /c \"gradlew.bat compileDebugKotlin 2>&1\")",
+      "Bash(powershell -Command \"cd 'C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp'; & .\\\\gradlew.bat compileDebugKotlin 2>&1 | Select-Object -Last 100\")",
+      "Bash(git -C \"C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp\" diff HEAD app/src/main/java/com/selfproject/learningapp/viewmodel/MainViewModel.kt)",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force 'C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp\\\\app\\\\build'\")",
+      "Bash(powershell -Command \"if \\(Test-Path 'C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp\\\\app\\\\build'\\) { 'STILL EXISTS' } else { 'DELETED' }\")"
+    ]
+  }
+}

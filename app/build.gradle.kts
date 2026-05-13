@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
 }
 
@@ -69,6 +70,11 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            // MLKit + datastore .so files cannot be stripped on some toolchains.
+            // Keep them as-is to prevent JVM crashes during native strip.
+            keepDebugSymbols += listOf("libdatastore_shared_counter.so", "libmlkit_google_ocr_pipeline.so")
+        }
     }
 }
 
@@ -113,6 +119,23 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Ktor HTTP client — replaces generativeai SDK for flexible API support
+    implementation("io.ktor:ktor-client-core:3.0.2")
+    implementation("io.ktor:ktor-client-okhttp:3.0.2")
+    implementation("io.ktor:ktor-client-content-negotiation:3.0.2")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.2")
+    implementation("io.ktor:ktor-client-logging:3.0.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // File parsing
+    implementation("org.apache.poi:poi:5.2.5")
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("org.jsoup:jsoup:1.17.2")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
+    // Security / Storage
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

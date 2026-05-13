@@ -9,14 +9,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.selfproject.learningapp.ui.navigation.LearningAppNavHost
-import com.selfproject.learningapp.ui.theme.LearningAppTheme
+import com.selfproject.learningapp.ui.theme.StudyNotesTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            LearningAppTheme {
+            StudyNotesTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

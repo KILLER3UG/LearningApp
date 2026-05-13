@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [BookmarkEntity::class, FlashcardEntity::class, QuizEntity::class],
-    version = 1,
+    entities = [BookmarkEntity::class, FlashcardEntity::class, QuizEntity::class, NoteAttachmentEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -15,6 +15,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun flashcardDao(): FlashcardDao
     abstract fun quizDao(): QuizDao
+    abstract fun noteAttachmentDao(): NoteAttachmentDao
 
     companion object {
         @Volatile

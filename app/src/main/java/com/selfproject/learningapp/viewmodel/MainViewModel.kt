@@ -16,16 +16,17 @@ import com.selfproject.learningapp.data.FileRepository
 import com.selfproject.learningapp.data.SearchEngine
 import com.selfproject.learningapp.data.StudyItemParser
 import com.selfproject.learningapp.data.StudyRepository
+import com.selfproject.learningapp.data.fileparser.FileType
 import com.selfproject.learningapp.data.local.BookmarkEntity
 import com.selfproject.learningapp.data.local.FlashcardEntity
 import com.selfproject.learningapp.data.local.QuizEntity
-import com.selfproject.learningapp.model.HighlightRange
 import com.selfproject.learningapp.model.AiConversation
 import com.selfproject.learningapp.model.AiModel
 import com.selfproject.learningapp.model.AiQueryState
 import com.selfproject.learningapp.model.ChatMessage
 import com.selfproject.learningapp.model.Document
 import com.selfproject.learningapp.model.DocumentUiState
+import com.selfproject.learningapp.model.HighlightRange
 import com.selfproject.learningapp.model.MessageType as MsgType
 import com.selfproject.learningapp.model.ModelCatalog
 import com.selfproject.learningapp.model.QuestionerConfig
@@ -36,6 +37,25 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Job
+
+/**
+ * A file attachment awaiting upload, shown as a chip above the composer.
+ * Issue 1: Universal file upload state tracking.
+ */
+data class PendingAttachment(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val uri: Uri,
+    val fileName: String,
+    val fileType: FileType,
+    val sizeBytes: Long,
+    val uploadState: UploadState = UploadState.Loading
+)
+
+sealed class UploadState {
+    data object Loading : UploadState()
+    data class Success(val uri: Uri) : UploadState()
+    data class Error(val message: String) : UploadState()
+}
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -97,6 +117,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var questionerState by mutableStateOf(QuestionerState())
         private set
 
+    // Issue 1: Pending attachments (universal file upload)
+    val pendingAttachments = mutableStateListOf<PendingAttachment>()
+
     // Get current conversation messages
     val currentMessages: List<ChatMessage>
         get() {
@@ -116,9 +139,72 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Loads a markdown file from the given URI.
+     * Issue 1: Adds a pending file attachment.
+     * Returns null on success, or an error message string.
+     */
+    fun addPendingAttachment(att: PendingAttachment): String? {
+        // Size guard: 50MB max
+        val sizeError = FileType.validateSize(att.sizeBytes)
+        if (sizeError != null) return sizeError
+        // Prevent duplicate URIs
+        if (pendingAttachments.any { it.uri == att.uri }) return null
+        pendingAttachments.add(att)
+        return null
+    }
+
+    /**
+     * Issue 1: Removes a pending attachment.
+     */
+    fun removePendingAttachment(id: String) {
+        pendingAttachments.removeAll { it.id == id }
+    }
+
+    /**
+     * Marks an attachment as successfully processed.
+     */
+    fun markAttachmentSuccess(id: String) {
+        val idx = pendingAttachments.indexOfFirst { it.id == id }
+        if (idx >= 0) pendingAttachments[idx] = pendingAttachments[idx].copy(uploadState = UploadState.Success(pendingAttachments[idx].uri))
+    }
+
+    /**
+     * Marks an attachment as failed.
+     */
+    fun markAttachmentError(id: String, message: String) {
+        val idx = pendingAttachments.indexOfFirst { it.id == id }
+        if (idx >= 0) pendingAttachments[idx] = pendingAttachments[idx].copy(uploadState = UploadState.Error(message))
+    }
+
+    /**
+     * Clears all pending attachments after upload.
+     */
+    fun clearPendingAttachments() {
+        pendingAttachments.clear()
+    }
+
+    /**
+     * Loads a document from the given URI.
+     * Issue 1: Includes 50MB size guard with Android Toast on error.
      */
     fun loadDocument(uri: Uri) {
+        // Issue 1: Size guard
+        try {
+            getApplication<Application>().contentResolver.openFileDescriptor(uri, "r")?.use { fd ->
+                val size = fd.statSize
+                val sizeError = FileType.validateSize(size)
+                if (sizeError != null) {
+                    android.widget.Toast.makeText(
+                        getApplication(),
+                        sizeError,
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+            }
+        } catch (e: Exception) {
+            // If we can't read the file, fall through to normal loading
+        }
+
         uiState = DocumentUiState.Loading
         viewModelScope.launch {
             try {
@@ -130,6 +216,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     refreshDocument(uri)
                     loadStudyData(uri.toString())
+                    // Mark attachment as success
+                    val attId = pendingAttachments.indexOfFirst { it.uri == uri }.takeIf { it >= 0 }?.let { pendingAttachments[it].id }
+                    attId?.let { markAttachmentSuccess(it) }
                     return@launch
                 }
 
@@ -139,7 +228,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 fileRepository.cacheContent(uri, fileData.content)
                 loadStudyData(uri.toString())
+                // Mark attachment as success
+                val attId = pendingAttachments.indexOfFirst { it.uri == uri }.takeIf { it >= 0 }?.let { pendingAttachments[it].id }
+                attId?.let { markAttachmentSuccess(it) }
             } catch (e: Exception) {
+                val attId = pendingAttachments.indexOfFirst { it.uri == uri }.takeIf { it >= 0 }?.let { pendingAttachments[it].id }
+                attId?.let { markAttachmentError(it, e.localizedMessage ?: "Failed to load") }
                 uiState = DocumentUiState.Error("Failed to load file: ${e.localizedMessage}")
             }
         }
@@ -298,7 +392,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     Guidelines:
                     - Always ground your responses in the document content
                     - When explaining concepts, reference specific sections or quote relevant passages
-                    - Use formatting: **bold** for key terms, \`code\` for technical terms, tables for comparisons
+                    - Use formatting: **bold** for key terms, `code` for technical terms, tables for comparisons
                     - If the user asks something not covered in the document, say so and offer what IS covered
                     - Be concise but thorough
                 """.trimIndent()
@@ -452,7 +546,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val chunks = DocumentChunker.chunkContent(content)
-                val allFlashcards = mutableListOf<com.selfproject.learningapp.data.local.FlashcardEntity>()
+                val allFlashcards = mutableListOf<FlashcardEntity>()
                 val maxFlashcards = 30 // Limit to prevent memory overload
 
                 for (chunk in chunks) {
@@ -491,7 +585,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val chunks = DocumentChunker.chunkContent(content)
-                val allQuizzes = mutableListOf<com.selfproject.learningapp.data.local.QuizEntity>()
+                val allQuizzes = mutableListOf<QuizEntity>()
                 val maxQuizzes = 30 // Limit to prevent memory overload
 
                 for (chunk in chunks) {

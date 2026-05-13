@@ -1,25 +1,55 @@
 package com.selfproject.learningapp.ui.screens
 
+import android.widget.Toast
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.selfproject.learningapp.data.fileparser.FileType
 import com.selfproject.learningapp.model.DocumentUiState
 import com.selfproject.learningapp.ui.components.*
 import com.selfproject.learningapp.viewmodel.MainViewModel
+import com.selfproject.learningapp.viewmodel.PendingAttachment
+
+// Full MIME array for universal study material support (Issue 1)
+private val ALL_SUPPORTED_MIME_TYPES = arrayOf(
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.ms-powerpoint",
+    "application/epub+zip",
+    "application/rtf",
+    "image/png", "image/jpeg", "image/heic", "image/webp", "image/heif",
+    "image/svg+xml",
+    "text/plain", "text/markdown", "text/html", "text/rtf",
+    "text/x-python", "text/javascript", "application/javascript",
+    "text/typescript", "text/jsx",
+    "text/x-c++src", "text/x-c", "text/x-java-source",
+    "application/json", "text/csv", "application/sql",
+    "audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentScreen(
     viewModel: MainViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateToHome: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
+    val ctx = LocalContext.current
+
     var showBottomSheet by remember { mutableStateOf(false) }
     var selectedText by remember { mutableStateOf("") }
     var promptTemplate by remember { mutableStateOf("Explain this clearly") }
@@ -31,10 +61,27 @@ fun DocumentScreen(
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
-        uri?.let { viewModel.loadDocument(it) }
+        if (uri == null) return@rememberLauncherForActivityResult
+        val mime = ctx.contentResolver.getType(uri)
+        val pfd = uri.let { ctx.contentResolver.openFileDescriptor(it, "r") }
+        val size = pfd?.statSize ?: 0
+        pfd?.close()
+        val sizeError = FileType.validateSize(size)
+        if (sizeError != null) {
+            Toast.makeText(ctx, sizeError, Toast.LENGTH_SHORT).show()
+        } else {
+            val fileName = uri.lastPathSegment ?: "file"
+            val ft = FileType.fromMimeOrExtension(mime, uri, ctx)
+            viewModel.addPendingAttachment(
+                PendingAttachment(uri = uri, fileName = fileName, fileType = ft, sizeBytes = size)
+            )?.let { error -> Toast.makeText(ctx, error, Toast.LENGTH_SHORT).show() }
+        }
     }
 
-    // FullDocumentChat rendered OUTSIDE Scaffold to fully cover everything
+    fun openFilePicker() {
+        filePickerLauncher.launch(ALL_SUPPORTED_MIME_TYPES)
+    }
+
     val showChat = viewModel.showFullDocumentChat
     val doc = (viewModel.uiState as? DocumentUiState.Success)?.document
 
@@ -82,6 +129,12 @@ fun DocumentScreen(
                     Text(title)
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToHome) {
+                        Icon(Icons.Default.Home, contentDescription = "Home")
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
                     ModelSelector(
                         selectedModel = viewModel.selectedModel,
                         availableModels = viewModel.availableModels,
@@ -109,9 +162,7 @@ fun DocumentScreen(
                     IconButton(onClick = { showQuizzes = true }) {
                         Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Quizzes")
                     }
-                    IconButton(onClick = {
-                        filePickerLauncher.launch(arrayOf("text/markdown", "text/plain", "text/*"))
-                    }) {
+                    IconButton(onClick = { openFilePicker() }) {
                         Icon(Icons.Default.Add, contentDescription = "Open File")
                     }
                 },
@@ -136,6 +187,25 @@ fun DocumentScreen(
                 .padding(paddingValues)
         ) {
             Column {
+                if (viewModel.pendingAttachments.isNotEmpty()) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(viewModel.pendingAttachments) { attachment ->
+                            AttachmentChip(
+                                fileName = attachment.fileName,
+                                fileType = attachment.fileType,
+                                fileSizeBytes = attachment.sizeBytes,
+                                uploadState = attachment.uploadState,
+                                onRemove = { viewModel.removePendingAttachment(attachment.id) },
+                                onClick = { viewModel.loadDocument(attachment.uri) }
+                            )
+                        }
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+
                 if (showSearch) {
                     SearchBar(
                         query = viewModel.searchQuery,
