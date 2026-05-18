@@ -99,12 +99,12 @@ fun AttachmentChip(
             if (uploadState !is UploadState.Loading) {
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Remove attachment",
-                        modifier = Modifier.size(14.dp),
+                        modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -117,7 +117,8 @@ private fun fileTypeIcon(fileType: FileType) = when (fileType) {
     FileType.PDF    -> Icons.Default.Description
     FileType.DOC,
     FileType.DOCX   -> Icons.Default.Description
-    FileType.PPTX   -> Icons.Default.TableChart
+    FileType.PPTX,
+    FileType.XLSX   -> Icons.Default.TableChart
     FileType.EPUB,
     FileType.HTML,
     FileType.RTF,
@@ -140,6 +141,7 @@ private fun fileTypeIcon(fileType: FileType) = when (fileType) {
 }
 
 private fun formatFileSize(bytes: Long): String = when {
+    bytes <= 0 -> "Unknown size"
     bytes < 1024 -> "$bytes B"
     bytes < 1024 * 1024 -> "${bytes / 1024} KB"
     else -> "%.1f MB".format(bytes / (1024.0 * 1024.0))

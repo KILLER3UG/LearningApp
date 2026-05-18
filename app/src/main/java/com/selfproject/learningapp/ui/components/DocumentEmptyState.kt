@@ -27,18 +27,18 @@ fun DocumentEmptyState(
             Icon(
                 imageVector = Icons.Default.FolderOpen,
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "No document open",
+                text = "Open a study file",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Tap the + button to open a .md file from your device",
+                text = "Ask questions, generate cards, and keep the page calm while you read.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -47,7 +47,7 @@ fun DocumentEmptyState(
             Button(onClick = onOpenFileClick) {
                 Icon(Icons.Default.FolderOpen, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Open File")
+                Text("Open Material")
             }
         }
     }

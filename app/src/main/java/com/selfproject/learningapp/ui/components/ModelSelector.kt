@@ -1,10 +1,7 @@
 package com.selfproject.learningapp.ui.components
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
@@ -12,6 +9,7 @@ import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.selfproject.learningapp.model.AiModel
 import com.selfproject.learningapp.model.ModelFamily
@@ -32,21 +30,29 @@ fun ModelSelector(
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-            modifier = Modifier.width(170.dp)
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.widthIn(min = 118.dp, max = 184.dp)
         ) {
             Icon(
                 Icons.Default.SmartToy,
                 contentDescription = null,
-                modifier = Modifier.padding(end = 4.dp),
+                modifier = Modifier
+                    .size(18.dp)
+                    .padding(end = 4.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = selectedModel.displayName,
                 style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            Icon(Icons.Default.ArrowDropDown, contentDescription = "Select model")
+            Icon(
+                Icons.Default.ArrowDropDown,
+                contentDescription = "Select model",
+                modifier = Modifier.size(18.dp)
+            )
         }
 
         DropdownMenu(
@@ -57,16 +63,11 @@ fun ModelSelector(
             ModelFamily.entries.forEach { family ->
                 val familyModels = availableModels.filter { it.family == family }
                 if (familyModels.isNotEmpty()) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = family.name.replace("_", " "),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        },
-                        onClick = { /* No-op, just a header */ },
-                        enabled = false,
+                    Text(
+                        text = family.name.replace("_", " "),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
                     )
 
                     familyModels.forEach { model ->

@@ -1,18 +1,21 @@
 package com.selfproject.learningapp.ui.components
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.selfproject.learningapp.data.StudyPracticeEngine
 import com.selfproject.learningapp.data.local.FlashcardEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,7 +54,7 @@ fun FlashcardViewer(
                 }
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             if (flashcards.isEmpty()) {
                 Text(
@@ -62,34 +65,57 @@ fun FlashcardViewer(
                 )
             } else {
                 val card = flashcards[currentIndex]
+                val stats = remember(flashcards) { StudyPracticeEngine.buildReviewStats(flashcards) }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FlashcardStat("Memory", "${stats.memoryScore}%", Modifier.weight(1f))
+                    FlashcardStat("Due", stats.due.toString(), Modifier.weight(1f))
+                    FlashcardStat("Mastered", stats.mastered.toString(), Modifier.weight(1f))
+                }
 
                 // Progress indicator
                 LinearProgressIndicator(
-                    progress = (currentIndex + 1).toFloat() / flashcards.size,
+                    progress = { (currentIndex + 1).toFloat() / flashcards.size },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
                 )
 
-                // Flashcard
+                // Flashcard with 3D flip animation
+                val rotation by animateFloatAsState(
+                    targetValue = if (showBack) 180f else 0f,
+                    animationSpec = tween(400),
+                    label = "cardFlip"
+                )
+                val cardRotation = if (rotation > 90f) rotation - 180f else rotation
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 16.dp)
-                        .clickable { showBack = !showBack },
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        .clickable { showBack = !showBack }
+                        .graphicsLayer {
+                            rotationY = cardRotation
+                            cameraDistance = 12.dp.toPx()
+                        },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp)
                     ) {
                         Text(
-                            text = if (showBack) "Answer" else "Question",
+                            text = if (rotation > 90f) "Answer" else "Question",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = if (showBack) card.answer else card.question,
+                            text = if (rotation > 90f) card.answer else card.question,
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
                         )
                     }
@@ -107,7 +133,7 @@ fun FlashcardViewer(
                         },
                         enabled = currentIndex > 0
                     ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Previous")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous")
                     }
 
                     Text(
@@ -122,7 +148,7 @@ fun FlashcardViewer(
                         },
                         enabled = currentIndex < flashcards.size - 1
                     ) {
-                        Icon(Icons.Default.ArrowForward, contentDescription = "Next")
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
                     }
                 }
 
@@ -132,16 +158,20 @@ fun FlashcardViewer(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
                             onClick = {
                                 onReview(card, false)
                                 showBack = false
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = null)
+                            Icon(Icons.Default.Refresh, contentDescription = null)
                             Spacer(Modifier.width(4.dp))
                             Text("Still Learning")
                         }
@@ -150,7 +180,11 @@ fun FlashcardViewer(
                                 onReview(card, true)
                                 showBack = false
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         ) {
                             Icon(Icons.Default.Check, contentDescription = null)
                             Spacer(Modifier.width(4.dp))
@@ -184,6 +218,20 @@ fun FlashcardViewer(
                     Text("Delete Card")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FlashcardStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.small
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleSmall)
         }
     }
 }

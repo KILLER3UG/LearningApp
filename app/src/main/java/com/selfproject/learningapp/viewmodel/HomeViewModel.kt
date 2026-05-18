@@ -1,9 +1,10 @@
 package com.selfproject.learningapp.viewmodel
 
 import android.app.Application
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.selfproject.learningapp.data.StudyRepository
+import com.selfproject.learningapp.data.local.AppDatabase
 import com.selfproject.learningapp.data.local.NoteAttachmentDao
 import com.selfproject.learningapp.model.Note
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,10 +20,11 @@ import java.util.UUID
  * Home screen ViewModel — manages note list, subject filtering, and swipe actions.
  * Issue 1: Note list with subject filter pills, swipe-to-pin/delete.
  */
-class HomeViewModel(
-    private val noteRepository: StudyRepository,
-    private val noteAttachmentDao: NoteAttachmentDao
-) : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val noteRepository = StudyRepository(application)
+    private val noteAttachmentDao: NoteAttachmentDao =
+        AppDatabase.getInstance(application).noteAttachmentDao()
 
     private val _selectedSubject = MutableStateFlow<String?>(null)
     val selectedSubject: StateFlow<String?> = _selectedSubject

@@ -10,7 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -63,7 +63,7 @@ fun AnthropicFAB(
             label = "fab_icon_swap"
         ) { loading ->
             Icon(
-                imageVector = if (loading) Icons.Outlined.Stop else Icons.Default.Send,
+                imageVector = if (loading) Icons.Outlined.Stop else Icons.AutoMirrored.Filled.Send,
                 contentDescription = if (loading) "Stop" else "Send",
                 modifier = Modifier
                     .size(24.dp)

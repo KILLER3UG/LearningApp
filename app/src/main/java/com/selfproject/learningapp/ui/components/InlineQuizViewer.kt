@@ -140,7 +140,14 @@ private fun QuizQuestionCard(
                             Spacer(Modifier.width(4.dp))
                             Text("Wrong")
                         }
-                        Button(onClick = { onAnswer(true) }, modifier = Modifier.weight(1f)) {
+                        Button(
+                            onClick = { onAnswer(true) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("Correct")
@@ -149,9 +156,12 @@ private fun QuizQuestionCard(
                 } else {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = if (state == InlineQuizAnswerState.Correct) "✓ Correct" else "✗ Incorrect",
+                        text = if (state == InlineQuizAnswerState.Correct) "Correct" else "Incorrect",
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (state == InlineQuizAnswerState.Correct) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        color = if (state == InlineQuizAnswerState.Correct)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

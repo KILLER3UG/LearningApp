@@ -1,5 +1,7 @@
 package com.selfproject.learningapp.ui.components
 
+import androidx.compose.animation.core.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -16,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.selfproject.learningapp.data.local.FlashcardEntity
@@ -86,17 +90,30 @@ fun InlineFlashcardViewer(
 
         Spacer(Modifier.height(24.dp))
 
+        // 3D flip animation
+        val flipRotation by animateFloatAsState(
+            targetValue = if (showAnswer) 180f else 0f,
+            animationSpec = tween(400),
+            label = "cardFlip"
+        )
+        val cardRotation = if (flipRotation > 90f) flipRotation - 180f else flipRotation
+
         // Single card only - no LazyColumn
         Card(
-            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp).clickable { showAnswer = !showAnswer },
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            shape = RoundedCornerShape(16.dp)
+            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp).clickable { showAnswer = !showAnswer }
+                .graphicsLayer {
+                    rotationY = cardRotation
+                    cameraDistance = 12.dp.toPx()
+                },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            shape = RoundedCornerShape(8.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = if (showAnswer) "Answer" else "Question",
+                Text(text = if (flipRotation > 90f) "Answer" else "Question",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(12.dp))
-                Text(text = if (showAnswer) card.answer else card.question,
+                Text(text = if (flipRotation > 90f) card.answer else card.question,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(16.dp))
                 if (!showAnswer) TextButton(onClick = { showAnswer = true }) { Text("Tap to reveal answer") }
@@ -122,15 +139,22 @@ fun InlineFlashcardViewer(
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = { onReview(card, false); showAnswer = false },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Still Learning")
                 }
                 Button(
                     onClick = { onReview(card, true); showAnswer = false },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))

@@ -1,6 +1,6 @@
 package com.selfproject.learningapp.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -25,18 +25,10 @@ data class TableTheme(
 
 @Composable
 fun tableTheme(): TableTheme {
-    val isDark = isSystemInDarkTheme()
-    return if (isDark) {
-        TableTheme(
-            headerBackground = Color(0xFF212529),
-            cellBorder = Color(0xFF343A40),
-            textColor = Color.White
-        )
-    } else {
-        TableTheme(
-            headerBackground = Color(0xFFF8F9FA),
-            cellBorder = Color(0xFFE9ECEF),
-            textColor = Color(0xFF1C1C1E)
-        )
-    }
+    val colors = MaterialTheme.colorScheme
+    return TableTheme(
+        headerBackground = colors.surfaceVariant.copy(alpha = 0.72f),
+        cellBorder = colors.outlineVariant,
+        textColor = colors.onSurface
+    )
 }

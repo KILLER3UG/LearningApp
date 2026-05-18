@@ -74,6 +74,10 @@ fun LearningAppNavHost() {
                         currentScreen = Screen.Document
                         mainViewModel.loadDocument(android.net.Uri.parse(note.id))
                     },
+                    onOpenDocumentClick = {
+                        selectedNoteId = null
+                        currentScreen = Screen.Document
+                    },
                     onSettingsClick = { currentScreen = Screen.Settings }
                 )
             }

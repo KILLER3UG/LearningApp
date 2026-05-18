@@ -779,6 +779,10 @@ class AiRepository(
             USER REQUEST:
             $promptTemplate
 
+            Response structure:
+            - For explanation requests, include a direct answer, context and background, and key takeaways.
+            - For testing requests, include questions and answers.
+
             Please provide a helpful, study-focused response to the user's request about the selected text, considering the surrounding context.
         """.trimIndent()
     }

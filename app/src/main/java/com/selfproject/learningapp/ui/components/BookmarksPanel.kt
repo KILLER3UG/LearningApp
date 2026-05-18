@@ -19,7 +19,7 @@ import com.selfproject.learningapp.data.local.BookmarkEntity
 @Composable
 fun BookmarksPanel(
     bookmarks: List<BookmarkEntity>,
-    onNavigateToBookmark: (Int) -> Unit,
+    onNavigateToBookmark: (BookmarkEntity) -> Unit,
     onDeleteBookmark: (BookmarkEntity) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -64,7 +64,7 @@ fun BookmarksPanel(
                     items(bookmarks, key = { it.id }) { bookmark ->
                         BookmarkItem(
                             bookmark = bookmark,
-                            onNavigate = { onNavigateToBookmark(bookmark.position) },
+                            onNavigate = { onNavigateToBookmark(bookmark) },
                             onDelete = { onDeleteBookmark(bookmark) }
                         )
                     }

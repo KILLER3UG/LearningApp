@@ -3,25 +3,55 @@ package com.selfproject.learningapp.data
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.selfproject.learningapp.data.fileparser.FileParseResult
+import com.selfproject.learningapp.data.fileparser.FileType
+import com.selfproject.learningapp.data.fileparser.ImageFileParser
+import com.selfproject.learningapp.data.fileparser.UnifiedFileParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 /**
  * Handles file reading operations via Android Storage Access Framework.
  */
 class FileRepository(private val context: Context) {
+    private val unifiedFileParser = UnifiedFileParser()
+    private val imageFileParser = ImageFileParser()
 
     /**
      * Reads the content of a file given its URI.
      */
     suspend fun readFileContent(uri: Uri): FileData = withContext(Dispatchers.IO) {
-        val contentResolver = context.contentResolver
-        val inputStream = contentResolver.openInputStream(uri)
-        val content = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
         val displayName = getDisplayName(uri)
-        FileData(content, displayName)
+
+        when (val result = unifiedFileParser.parse(uri, context)) {
+            is FileParseResult.Success -> {
+                val title = result.metadata.title?.takeIf { it.isNotBlank() } ?: displayName
+                FileData(result.text, title)
+            }
+
+            is FileParseResult.ImageFile -> {
+                val extractedText = runCatching {
+                    imageFileParser.extractText(uri, context).trim()
+                }.getOrDefault("")
+                val content = if (extractedText.isNotBlank()) {
+                    buildString {
+                        appendLine("# $displayName")
+                        appendLine()
+                        appendLine("Extracted text from image:")
+                        appendLine()
+                        appendLine(extractedText)
+                    }
+                } else {
+                    buildNonTextDocument(displayName, FileType.IMAGE)
+                }
+                FileData(content, displayName)
+            }
+
+            is FileParseResult.Error -> {
+                val fileType = unifiedFileParser.detectType(uri, context)
+                FileData(buildNonTextDocument(displayName, fileType, result.message), displayName)
+            }
+        }
     }
 
     /**
@@ -101,6 +131,24 @@ class FileRepository(private val context: Context) {
             e.printStackTrace()
             false
         }
+    }
+
+    private fun buildNonTextDocument(
+        displayName: String,
+        fileType: FileType,
+        parseMessage: String? = null
+    ): String = buildString {
+        appendLine("# $displayName")
+        appendLine()
+        appendLine("This ${fileType.displayName.lowercase()} file was added as a study source.")
+        appendLine()
+        appendLine("StudyNotes can open the file, but it could not extract readable text from it on this device yet.")
+        parseMessage?.takeIf { it.isNotBlank() }?.let {
+            appendLine()
+            appendLine("Parser note: $it")
+        }
+        appendLine()
+        appendLine("You can still keep it in the source list, or use a text-based export of the file for richer AI summaries, study guides, quizzes, and flashcards.")
     }
 }
 

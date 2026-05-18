@@ -9,7 +9,11 @@
       "Bash(powershell -Command \"cd 'C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp'; & .\\\\gradlew.bat compileDebugKotlin 2>&1 | Select-Object -Last 100\")",
       "Bash(git -C \"C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp\" diff HEAD app/src/main/java/com/selfproject/learningapp/viewmodel/MainViewModel.kt)",
       "Bash(powershell -Command \"Remove-Item -Recurse -Force 'C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp\\\\app\\\\build'\")",
-      "Bash(powershell -Command \"if \\(Test-Path 'C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp\\\\app\\\\build'\\) { 'STILL EXISTS' } else { 'DELETED' }\")"
+      "Bash(powershell -Command \"if \\(Test-Path 'C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp\\\\app\\\\build'\\) { 'STILL EXISTS' } else { 'DELETED' }\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\rober\\\\LocalFolders\\\\SelfProject\\\\LearningApp\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\" -ErrorAction SilentlyContinue | Format-Table Name, @{N=\"SizeMB\";E={[math]::Round\\($_.Length/1MB,1\\)}}, LastWriteTime -AutoSize)",
+      "PowerShell(pwsh --version 2>$null; $PSVersionTable.PSVersion.ToString\\(\\))",
+      "PowerShell(winget upgrade *)",
+      "PowerShell(pwsh -Version 2>$null; $PSVersionTable.PSVersion.ToString\\(\\))"
     ]
   }
 }

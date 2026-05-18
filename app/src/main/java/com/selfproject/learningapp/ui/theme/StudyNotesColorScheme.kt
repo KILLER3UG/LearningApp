@@ -1,26 +1,23 @@
 package com.selfproject.learningapp.ui.theme
 
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Issue 3: Teal primary (replaces violet), clean paper-like surfaces, no glassmorphism
 private val LightColorScheme = ColorScheme(
-    primary            = StudyFirstColors.Teal400,    // #30D158
+    primary            = StudyFirstColors.Teal500,
     onPrimary          = Color.White,
-    primaryContainer   = Color(0xFFB7F4C3),
-    onPrimaryContainer = Color(0xFF002200),
-    secondary          = StudyFirstColors.StudySurfaceLight,
-    onSecondary        = StudyFirstColors.StudyTextLight,
-    secondaryContainer = StudyFirstColors.StudySurface2Light,
+    primaryContainer   = Color(0xFFE3F3EC),
+    onPrimaryContainer = Color(0xFF083D2E),
+    secondary          = Color(0xFF5E6A65),
+    onSecondary        = Color.White,
+    secondaryContainer = Color(0xFFE8ECE8),
     onSecondaryContainer = StudyFirstColors.StudyTextSecLight,
-    tertiary           = StudyFirstColors.Teal600,
+    tertiary           = StudyFirstColors.Clay600,
     onTertiary         = Color.White,
-    tertiaryContainer  = Color(0xFF90F59C),
-    onTertiaryContainer = Color(0xFF003311),
-    error              = Color(0xFFFF3B30),
+    tertiaryContainer  = Color(0xFFF4E2D8),
+    onTertiaryContainer = Color(0xFF442312),
+    error              = Color(0xFFB3261E),
     onError            = Color.White,
     errorContainer     = Color(0xFFFFDAD6),
     onErrorContainer   = Color(0xFF410002),
@@ -36,27 +33,27 @@ private val LightColorScheme = ColorScheme(
     inverseSurface     = StudyFirstColors.StudySurfaceDark,
     inverseOnSurface   = StudyFirstColors.StudyTextDark,
     inversePrimary     = StudyFirstColors.Teal300,
-    surfaceTint        = StudyFirstColors.Teal400
+    surfaceTint        = StudyFirstColors.Teal500
 )
 
 private val DarkColorScheme = ColorScheme(
-    primary            = StudyFirstColors.Teal400,    // #30D158
-    onPrimary          = Color.Black,
-    primaryContainer   = Color(0xFF003311),
-    onPrimaryContainer = Color(0xFF90F59C),
-    secondary          = StudyFirstColors.StudySurfaceDark,
-    onSecondary        = StudyFirstColors.StudyTextDark,
-    secondaryContainer = StudyFirstColors.StudySurface2Dark,
+    primary            = StudyFirstColors.Teal300,
+    onPrimary          = Color(0xFF06251A),
+    primaryContainer   = Color(0xFF123D30),
+    onPrimaryContainer = Color(0xFFD5F7E9),
+    secondary          = Color(0xFFA7ADA8),
+    onSecondary        = Color(0xFF171A18),
+    secondaryContainer = Color(0xFF2A302B),
     onSecondaryContainer = StudyFirstColors.StudyTextSecDark,
-    tertiary           = StudyFirstColors.Teal300,
-    onTertiary         = Color.Black,
-    tertiaryContainer  = Color(0xFF1A7A38),
-    onTertiaryContainer = Color(0xFF5EE07C),
+    tertiary           = StudyFirstColors.Clay400,
+    onTertiary         = Color(0xFF2A1207),
+    tertiaryContainer  = Color(0xFF51301E),
+    onTertiaryContainer = Color(0xFFFFE2CF),
     error              = Color(0xFFFF6961),
     onError            = Color.Black,
     errorContainer      = Color(0xFF93000A),
     onErrorContainer    = Color(0xFFFFDAD6),
-    background         = StudyFirstColors.StudyCanvasDark,  // #1C1C1E
+    background         = StudyFirstColors.StudyCanvasDark,
     onBackground       = StudyFirstColors.StudyTextDark,
     surface            = StudyFirstColors.StudyCanvasDark,
     onSurface          = StudyFirstColors.StudyTextDark,

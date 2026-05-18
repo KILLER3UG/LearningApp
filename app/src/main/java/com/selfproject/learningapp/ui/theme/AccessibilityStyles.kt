@@ -1,6 +1,6 @@
 package com.selfproject.learningapp.ui.theme
 
-import android.content.res.Configuration
+import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -9,32 +9,30 @@ import androidx.compose.ui.unit.dp
 /**
  * Accessibility styles and constants.
  *
- * Issue 3: WCAG AA contrast, Dynamic Type support, reduced motion.
- *
- * All colors in the StudyFirst palette meet WCAG AA:
- * - Teal #30D158 on White  → 5.2:1 ✓ (AA)
- * - Teal #30D158 on Black  → 8.1:1 ✓ (AA)
- * - Black #1C1C1E on White → 16.1:1 ✓ (AAA)
- * - White on #1C1C1E      → 16.1:1 ✓ (AAA)
+ * Accessibility styles and constants for touch targets, readable text, and motion.
  */
 object AccessibilityStyles {
 
-    /** Minimum touch target for interactive elements (44×44pt, per iOS HIG / Material guidelines) */
+    /** Minimum touch target for interactive elements. */
     val MinTouchTarget: Dp = 44.dp
 
-    /** Minimum font size for body text (respects Dynamic Type on iOS) */
+    /** Minimum font size for body text. */
     val MinBodyFontSize: Dp = 13.dp
 }
 
 /**
- * Returns true if the user has enabled "Reduce Motion" in their system settings.
- * Compose doesn't have a built-in API for this, so we check via the context's configuration.
+ * Returns true if the user has disabled Android animator duration scale.
  */
 @Composable
 fun prefersReducedMotion(): Boolean {
     val context = LocalContext.current
-    return (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) !=
-        Configuration.UI_MODE_NIGHT_YES
+    return runCatching {
+        Settings.Global.getFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f
+        ) == 0f
+    }.getOrDefault(false)
 }
 
 /**

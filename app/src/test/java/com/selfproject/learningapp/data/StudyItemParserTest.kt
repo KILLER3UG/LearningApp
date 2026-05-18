@@ -36,10 +36,8 @@ class StudyItemParserTest {
         val flashcards = StudyItemParser.parseFlashcards(response, "uri://test")
 
         assertEquals(1, flashcards.size)
-        // The parser uses substringAfter(":") which for "Q. What is DNA?" returns the full line
-        // since there's no colon. The actual behavior depends on the parser implementation.
-        // For dot format, the question includes everything after "Q. "
-        assertTrue(flashcards[0].question.contains("DNA"))
+        assertEquals("What is DNA?", flashcards[0].question)
+        assertEquals("Deoxyribonucleic acid.", flashcards[0].answer)
     }
 
     @Test
@@ -97,6 +95,25 @@ class StudyItemParserTest {
         assertEquals(1, quizzes.size)
         assertEquals("What is the water cycle?", quizzes[0].question)
         assertTrue(quizzes[0].answer.contains("water on Earth"))
+    }
+
+    @Test
+    fun `parseQuizzes handles numbered dot and parenthesis formats`() {
+        val response = """
+            Q1. What does ATP store?
+            A. Energy
+
+            Q2) What molecule carries genetic information?
+            Answer: DNA
+        """.trimIndent()
+
+        val quizzes = StudyItemParser.parseQuizzes(response, "uri://test", "source")
+
+        assertEquals(2, quizzes.size)
+        assertEquals("What does ATP store?", quizzes[0].question)
+        assertEquals("Energy", quizzes[0].answer)
+        assertEquals("What molecule carries genetic information?", quizzes[1].question)
+        assertEquals("DNA", quizzes[1].answer)
     }
 
     @Test

@@ -2,29 +2,30 @@ package com.selfproject.learningapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── Study-First Palette (Issue 3: replaces purple with teal) ───────────────
+// Neutral chat palette inspired by Claude and ChatGPT: quiet surfaces, one cool
+// action color, and a small warm accent for secondary emphasis.
 object StudyFirstColors {
-    // Teal accent — WCAG AA on white (5.2:1) and black (8.1:1)
-    val Teal300    = Color(0xFF5EE07C)
-    val Teal400    = Color(0xFF30D158)
-    val Teal500    = Color(0xFF28A845)
-    val Teal600    = Color(0xFF20B84A)
-    val Teal700    = Color(0xFF1A7A38)
+    val Teal300    = Color(0xFF8CE0C0)
+    val Teal400    = Color(0xFF2A8F6A)
+    val Teal500    = Color(0xFF167A5B)
+    val Teal600    = Color(0xFF0E6047)
+    val Teal700    = Color(0xFF0A3F31)
+    val Clay400    = Color(0xFFC77A52)
+    val Clay600    = Color(0xFF9A5A3A)
 
-    // Study-First neutrals — paper-like, no glassmorphism
-    val StudyCanvasLight    = Color(0xFFFFFFFF)
-    val StudyTextLight      = Color(0xFF1C1C1E)
-    val StudyTextSecLight   = Color(0xFF6C6C70)
-    val StudySurfaceLight   = Color(0xFFF2F2F7)
-    val StudySurface2Light  = Color(0xFFE5E5EA)
-    val StudyDividerLight   = Color(0xFFD1D1D6)
+    val StudyCanvasLight    = Color(0xFFFAFAF7)
+    val StudyTextLight      = Color(0xFF171A18)
+    val StudyTextSecLight   = Color(0xFF666C68)
+    val StudySurfaceLight   = Color(0xFFFFFFFF)
+    val StudySurface2Light  = Color(0xFFF1F1EC)
+    val StudyDividerLight   = Color(0xFFD9D8D1)
 
-    val StudyCanvasDark     = Color(0xFF1C1C1E)
-    val StudyTextDark       = Color(0xFFFFFFFF)
-    val StudyTextSecDark    = Color(0xFF8E8E93)
-    val StudySurfaceDark    = Color(0xFF2C2C2E)
-    val StudySurface2Dark   = Color(0xFF3A3A3C)
-    val StudyDividerDark    = Color(0xFF48484A)
+    val StudyCanvasDark     = Color(0xFF101211)
+    val StudyTextDark       = Color(0xFFEDEEEB)
+    val StudyTextSecDark    = Color(0xFFA7ADA8)
+    val StudySurfaceDark    = Color(0xFF171A18)
+    val StudySurface2Dark   = Color(0xFF232722)
+    val StudyDividerDark    = Color(0xFF3A403B)
 }
 
 // ── Base Neutrals ────────────────────────────────────────────

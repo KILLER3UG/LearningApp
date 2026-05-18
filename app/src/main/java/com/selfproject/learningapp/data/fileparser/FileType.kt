@@ -2,6 +2,7 @@ package com.selfproject.learningapp.data.fileparser
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 
 /**
  * Supported file types for universal study-material support.
@@ -45,7 +46,7 @@ enum class FileType(
         setOf("rtf"), "ic_file_rtf", true
     ),
     IMAGE(
-        "Image", setOf("image/png", "image/jpeg", "image/webp", "image/gif", "image/heic", "image/heif"),
+        "Image", setOf("image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif", "image/heic", "image/heif", "image/bmp"),
         setOf("png", "jpg", "jpeg", "webp", "gif", "heic", "heif", "bmp"), "ic_file_image", false
     ),
     SVG(
@@ -58,14 +59,14 @@ enum class FileType(
     ),
     PLAIN_TEXT(
         "Text", setOf("text/plain"),
-        setOf("txt", "text"), "ic_file_text", true
+        setOf("txt", "text", "log", "yaml", "yml", "xml", "gradle", "properties", "ini"), "ic_file_text", true
     ),
     PY(
         "Python", setOf("text/x-python"),
         setOf("py"), "ic_file_code", true
     ),
     JS(
-        "JavaScript", setOf("text/javascript", "application/javascript"),
+        "JavaScript", setOf("text/javascript", "application/javascript", "application/x-javascript"),
         setOf("js"), "ic_file_code", true
     ),
     TS(
@@ -85,12 +86,19 @@ enum class FileType(
         setOf("java"), "ic_file_code", true
     ),
     JSON(
-        "JSON", setOf("application/json"),
+        "JSON", setOf("application/json", "text/json"),
         setOf("json"), "ic_file_json", true
     ),
     CSV(
         "CSV", setOf("text/csv"),
         setOf("csv"), "ic_file_csv", true
+    ),
+    XLSX(
+        "Spreadsheet", setOf(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel"
+        ),
+        setOf("xlsx", "xls"), "ic_file_csv", false
     ),
     SQL(
         "SQL", setOf("application/sql", "text/sql"),
@@ -112,16 +120,29 @@ enum class FileType(
         fun fromMimeOrExtension(mime: String?, uri: Uri, context: Context): FileType {
             mime?.let { m ->
                 entries.find { it != UNKNOWN && it.mimeTypes.contains(m) }?.let { return it }
+                if (m.startsWith("text/")) return PLAIN_TEXT
             }
-            val ext = context.contentResolver.getType(uri)
-                ?.substringAfterLast('/')
-                ?: uri.lastPathSegment?.substringAfterLast('.')?.lowercase()
-                ?: ""
-            return entries.find { it != UNKNOWN && it.extensions.contains(ext) } ?: PLAIN_TEXT
+
+            val ext = resolveDisplayName(uri, context)
+                ?.substringAfterLast('.', missingDelimiterValue = "")
+                ?.lowercase()
+                .orEmpty()
+            return entries.find { it != UNKNOWN && it.extensions.contains(ext) } ?: UNKNOWN
         }
 
         /** Returns null if size is OK, returns error message if too large. */
         fun validateSize(sizeBytes: Long): String? =
             if (sizeBytes > MAX_SIZE_BYTES) "File too large. Try under 50MB." else null
+
+        private fun resolveDisplayName(uri: Uri, context: Context): String? {
+            var name: String? = null
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst() && nameIndex != -1) {
+                    name = cursor.getString(nameIndex)
+                }
+            }
+            return name ?: uri.lastPathSegment
+        }
     }
 }

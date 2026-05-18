@@ -39,7 +39,7 @@ import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Job
 
 /**
- * A file attachment awaiting upload, shown as a chip above the composer.
+ * A source file selected through Android's document picker, shown as a chip above the document.
  * Issue 1: Universal file upload state tracking.
  */
 data class PendingAttachment(
@@ -48,7 +48,7 @@ data class PendingAttachment(
     val fileName: String,
     val fileType: FileType,
     val sizeBytes: Long,
-    val uploadState: UploadState = UploadState.Loading
+    val uploadState: UploadState = UploadState.Success(uri)
 )
 
 sealed class UploadState {
@@ -368,10 +368,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Sends a message in the full-document chat.
      */
     fun sendChatMessage(message: String) {
+        sendDocumentPrompt(visibleUserMessage = message, instruction = message)
+    }
+
+    /**
+     * Runs a Notebook-style source action while keeping the chat message concise.
+     */
+    fun runNotebookAction(label: String, prompt: String) {
+        sendDocumentPrompt(visibleUserMessage = label, instruction = prompt)
+    }
+
+    private fun sendDocumentPrompt(visibleUserMessage: String, instruction: String) {
         val doc = (uiState as? DocumentUiState.Success)?.document ?: return
 
         // Add user message
-        addMessageToCurrentConversation(ChatMessage(role = Role.USER, content = message))
+        addMessageToCurrentConversation(ChatMessage(role = Role.USER, content = visibleUserMessage))
 
         // Create placeholder for AI response
         addMessageToCurrentConversation(ChatMessage(role = Role.AI, content = ""))
@@ -397,7 +408,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     - Be concise but thorough
                 """.trimIndent()
 
-                val fullPrompt = "$systemPrompt\n\nUSER QUESTION: $message"
+                val fullPrompt = "$systemPrompt\n\nUSER QUESTION: $instruction"
 
                 aiRepository.queryAiDirect(fullPrompt)
                     .catch { e ->
@@ -564,7 +575,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 addMessageToCurrentConversation(
                     ChatMessage(
                         role = Role.AI,
-                        content = "📚 I've created **${allFlashcards.size} flashcards** covering the entire document. Tap the card above to study!",
+                        content = "Created **${allFlashcards.size} flashcards** covering the entire document.",
                         type = MsgType.FLASHCARD_GENERATED,
                         flashcards = allFlashcards,
                     )
@@ -603,7 +614,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 addMessageToCurrentConversation(
                     ChatMessage(
                         role = Role.AI,
-                        content = "❓ I've created a **${allQuizzes.size}-question quiz** covering the entire document. Tap the card above to test yourself!",
+                        content = "Created a **${allQuizzes.size}-question quiz** covering the entire document.",
                         type = MsgType.QUIZ_GENERATED,
                         quizzes = allQuizzes,
                     )
@@ -850,6 +861,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun recordFlashcardResult(flashcard: FlashcardEntity, correct: Boolean) {
         viewModelScope.launch {
             studyRepository.recordFlashcardResult(flashcard, correct)
+        }
+    }
+
+    fun deleteFlashcard(flashcard: FlashcardEntity) {
+        viewModelScope.launch {
+            studyRepository.removeFlashcard(flashcard)
+        }
+    }
+
+    fun deleteQuiz(quiz: QuizEntity) {
+        viewModelScope.launch {
+            studyRepository.removeQuiz(quiz)
         }
     }
 

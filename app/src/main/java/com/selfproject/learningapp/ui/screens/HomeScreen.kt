@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
@@ -29,6 +30,7 @@ import com.selfproject.learningapp.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     onNoteClick: (Note) -> Unit,
+    onOpenDocumentClick: () -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: HomeViewModel
 ) {
@@ -47,6 +49,13 @@ fun HomeScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = onOpenDocumentClick) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Open material",
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             Icons.Default.Settings,
@@ -66,7 +75,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Subject filter pills
             item {
@@ -117,16 +126,22 @@ fun HomeScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                "No notes yet",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                "Start with a file",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Open a file to start studying",
+                                "Open a document and ask questions from a clean AI workspace.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Button(onClick = onOpenDocumentClick) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Open Material")
+                            }
                         }
                     }
                 }
@@ -184,6 +199,8 @@ private fun NoteListItem(
             onClick = onClick,
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -232,8 +249,7 @@ private fun NoteListItem(
                                             subject,
                                             style = MaterialTheme.typography.labelSmall
                                         )
-                                    },
-                                    modifier = Modifier.height(22.dp)
+                                    }
                                 )
                             }
                         }

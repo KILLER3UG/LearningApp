@@ -2,18 +2,22 @@ package com.selfproject.learningapp.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Stop
@@ -27,6 +31,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.selfproject.learningapp.data.local.FlashcardEntity
 import com.selfproject.learningapp.data.local.QuizEntity
@@ -42,6 +48,7 @@ fun FullDocumentChat(
     queryState: AiQueryState,
     messages: List<ChatMessage>,
     onSendMessage: (String) -> Unit,
+    onNotebookAction: (String, String) -> Unit = { _, _ -> },
     onStopStreaming: () -> Unit = {},
     onSubmitAnswer: (String) -> Unit = {},
     questionerState: com.selfproject.learningapp.model.QuestionerState = com.selfproject.learningapp.model.QuestionerState(),
@@ -60,6 +67,7 @@ fun FullDocumentChat(
     onStartQuestioner: (QuestionerConfig) -> Unit = {},
     onNavigateFlashcards: () -> Unit = {},
     onNavigateQuizzes: () -> Unit = {},
+    onNavigateMatch: () -> Unit = {},
     onReviewFlashcard: (FlashcardEntity, Boolean) -> Unit = { _, _ -> },
     onDeleteFlashcard: (FlashcardEntity) -> Unit = {},
     onDeleteQuiz: (QuizEntity) -> Unit = {},
@@ -74,12 +82,14 @@ fun FullDocumentChat(
     var showQuestionerConfig by remember { mutableStateOf(false) }
     var showConvMenu by remember { mutableStateOf(false) }
     var showModelMenu by remember { mutableStateOf(false) }
+    val notebookActions = remember(documentTitle) { notebookActions(documentTitle) }
 
     val viewingFlashcards = viewingFlashcardMessageId?.let { id -> messages.find { it.id == id }?.flashcards }
     val viewingQuizzes = viewingQuizMessageId?.let { id -> messages.find { it.id == id }?.quizzes }
 
     LaunchedEffect(messages.size) {
-        if (listState.canScrollForward) listState.animateScrollToItem(listState.layoutInfo.totalItemsCount - 1)
+        val lastIndex = listState.layoutInfo.totalItemsCount - 1
+        if (lastIndex >= 0) listState.animateScrollToItem(lastIndex)
     }
 
     if (showQuestionerConfig) {
@@ -90,80 +100,97 @@ fun FullDocumentChat(
         return
     }
 
-    if (viewingFlashcards != null) {
-        InlineFlashcardViewer(flashcards = viewingFlashcards!!, onBackToChat = { viewingFlashcardMessageId = null },
+    viewingFlashcards?.let { flashcards ->
+        InlineFlashcardViewer(flashcards = flashcards, onBackToChat = { viewingFlashcardMessageId = null },
             onReview = onReviewFlashcard, onDelete = { onDeleteFlashcard(it); viewingFlashcardMessageId = null })
         return
     }
 
-    if (viewingQuizzes != null) {
-        InlineQuizViewer(quizzes = viewingQuizzes!!, onBackToChat = { viewingQuizMessageId = null },
+    viewingQuizzes?.let { quizzes ->
+        InlineQuizViewer(quizzes = quizzes, onBackToChat = { viewingQuizMessageId = null },
             onDelete = { onDeleteQuiz(it); viewingQuizMessageId = null })
         return
     }
 
     Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // === HEADER ===
-        Surface(tonalElevation = 1.dp, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                // Top row: Back | Conversation | Model | Document title
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp).padding(top = 28.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Back
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
+        Surface(
+            tonalElevation = 0.dp,
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
-                    // Conversation dropdown
-                    Box {
-                        TextButton(onClick = { showConvMenu = !showConvMenu }, modifier = Modifier.height(36.dp)) {
-                            Text(
-                                conversations.find { it.id == currentConversationId }?.title ?: "New Chat",
-                                style = MaterialTheme.typography.labelMedium,
-                                maxLines = 1,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp))
-                        }
-                        DropdownMenu(expanded = showConvMenu, onDismissRequest = { showConvMenu = false }, modifier = Modifier.width(200.dp)) {
-                            conversations.forEach { conv ->
-                                DropdownMenuItem(
-                                    text = { Text(conv.title, maxLines = 1) },
-                                    onClick = { onSwitchConversation(conv.id); showConvMenu = false },
-                                    trailingIcon = {
-                                        if (conversations.size > 1) IconButton(onClick = { onDeleteConversation(conv.id); showConvMenu = false }) {
-                                            Icon(Icons.Default.Close, contentDescription = "Delete", modifier = Modifier.size(16.dp))
-                                        }
-                                    }
-                                )
-                            }
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("+ New Chat", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) },
-                                onClick = { onCreateConversation(); showConvMenu = false }
-                            )
-                        }
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 4.dp)
+                    ) {
+                        Text(
+                            conversations.find { it.id == currentConversationId }?.title ?: "New chat",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            "${selectedModel?.displayName ?: "Model"} · $documentTitle",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
-                    Spacer(Modifier.weight(1f))
-
-                    // Model selector
                     if (availableModels.isNotEmpty()) {
                         Box {
-                            TextButton(onClick = { showModelMenu = !showModelMenu }, modifier = Modifier.height(36.dp)) {
-                                Icon(Icons.Default.SmartToy, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(4.dp))
-                                Text(selectedModel?.displayName ?: "Model", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                            IconButton(onClick = { showModelMenu = true }, modifier = Modifier.size(44.dp)) {
+                                Icon(
+                                    Icons.Outlined.SmartToy,
+                                    contentDescription = "Select model",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            DropdownMenu(expanded = showModelMenu, onDismissRequest = { showModelMenu = false }, modifier = Modifier.width(180.dp)) {
+                            DropdownMenu(
+                                expanded = showModelMenu,
+                                onDismissRequest = { showModelMenu = false },
+                                modifier = Modifier.width(220.dp)
+                            ) {
                                 availableModels.forEach { model ->
                                     DropdownMenuItem(
-                                        text = { Text(model.displayName, style = MaterialTheme.typography.bodyMedium) },
-                                        onClick = { onModelSelected(model); showModelMenu = false },
+                                        text = {
+                                            Text(
+                                                model.displayName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        },
+                                        onClick = {
+                                            onModelSelected(model)
+                                            showModelMenu = false
+                                        },
                                         trailingIcon = {
-                                            if (model.id == selectedModel?.id) Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                            if (model.id == selectedModel?.id) {
+                                                Icon(
+                                                    Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
                                         }
                                     )
                                 }
@@ -171,24 +198,84 @@ fun FullDocumentChat(
                         }
                     }
 
-                    // Document title
-                    Spacer(Modifier.width(8.dp))
-                    Text(documentTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    Box {
+                        IconButton(onClick = { showConvMenu = true }, modifier = Modifier.size(44.dp)) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "Conversation options",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showConvMenu,
+                            onDismissRequest = { showConvMenu = false },
+                            modifier = Modifier.width(240.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("New chat") },
+                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                                onClick = {
+                                    onCreateConversation()
+                                    showConvMenu = false
+                                }
+                            )
+                            if (conversations.isNotEmpty()) {
+                                HorizontalDivider()
+                                conversations.forEach { conv ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                conv.title,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        },
+                                        onClick = {
+                                            onSwitchConversation(conv.id)
+                                            showConvMenu = false
+                                        },
+                                        trailingIcon = {
+                                            if (conversations.size > 1) {
+                                                IconButton(
+                                                    onClick = {
+                                                        onDeleteConversation(conv.id)
+                                                        showConvMenu = false
+                                                    },
+                                                    modifier = Modifier.size(36.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Close, contentDescription = "Delete", modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             }
         }
 
-        // === MESSAGES ===
         Box(modifier = Modifier.weight(1f)) {
             if (messages.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("💬", style = MaterialTheme.typography.displaySmall)
-                        Spacer(Modifier.height(16.dp))
-                        Text("Ask me anything about this document", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    ) {
+                        AiEmptyIllustration()
+                        Spacer(Modifier.height(20.dp))
+                        Text("Ready for this document", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(8.dp))
-                        Text("I have the full document context loaded", style = MaterialTheme.typography.bodyMedium,
+                        Text("Ask anything, generate study materials, or turn the source into a structured guide.", style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(20.dp))
+                        NotebookPromptGrid(
+                            actions = notebookActions,
+                            enabled = !isStreaming,
+                            onAction = { action -> onNotebookAction(action.label, action.prompt) }
+                        )
                     }
                 }
             } else {
@@ -206,7 +293,12 @@ fun FullDocumentChat(
                                     shape = RoundedCornerShape(20.dp, 6.dp, 20.dp, 20.dp),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                                 ) {
-                                    Text(text = message.content, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                                    Text(
+                                        text = message.content,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                                    )
                                 }
                             }
                         } else {
@@ -234,74 +326,348 @@ fun FullDocumentChat(
             }
         }
 
-        // === INPUT BAR ===
-        Surface(tonalElevation = 1.dp) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                // Options dropdown
+        Surface(
+            tonalElevation = 0.dp,
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+            ) {
                 AnimatedVisibility(visible = showOptionsMenu) {
                     QuestionOptionsMenu(
+                        notebookActions = notebookActions,
+                        onNotebookAction = { action ->
+                            showOptionsMenu = false
+                            onNotebookAction(action.label, action.prompt)
+                        },
                         onGenerateFlashcards = { showOptionsMenu = false; onGenerateFullDocFlashcards() },
                         onGenerateQuiz = { showOptionsMenu = false; onGenerateFullDocQuiz() },
                         onStartGuidedLearning = { showOptionsMenu = false; onStartGuidedLearning() },
                         onShowQuestionerConfig = { showOptionsMenu = false; showQuestionerConfig = true },
                         onNavigateFlashcards = { showOptionsMenu = false; onNavigateFlashcards() },
-                        onNavigateQuizzes = { showOptionsMenu = false; onNavigateQuizzes() }
+                        onNavigateQuizzes = { showOptionsMenu = false; onNavigateQuizzes() },
+                        onNavigateMatch = { showOptionsMenu = false; onNavigateMatch() }
                     )
                 }
 
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // + button
-                    IconButton(onClick = { showOptionsMenu = !showOptionsMenu }) {
-                        Icon(Icons.Default.Add, contentDescription = "Options",
-                            tint = if (showOptionsMenu) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-
-                    // Text input
-                    OutlinedTextField(
-                        value = inputText, onValueChange = { inputText = it },
-                        placeholder = {
-                            Text(if (questionerState.awaitingAnswer) "Type your answer..." else "Ask about this document...")
-                        },
-                        modifier = Modifier.weight(1f), maxLines = 5,
-                        shape = RoundedCornerShape(24.dp),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(onSend = {
-                            if (inputText.isNotBlank()) {
-                                if (questionerState.awaitingAnswer) { onSubmitAnswer(inputText.trim()) }
-                                else { onSendMessage(inputText.trim()) }
-                                inputText = ""
-                            }
-                        }),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        )
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    // Send/Stop button
-                    FloatingActionButton(
-                        onClick = {
-                            if (isStreaming) onStopStreaming()
-                            else if (inputText.isNotBlank()) {
-                                if (questionerState.awaitingAnswer) onSubmitAnswer(inputText.trim())
-                                else onSendMessage(inputText.trim())
-                                inputText = ""
-                            }
-                        },
-                        containerColor = if (isStreaming) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(44.dp)
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 54.dp)
+                            .padding(start = 4.dp, end = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AnimatedContent(targetState = isStreaming, label = "sendStop") { streaming ->
-                            if (streaming) Icon(Icons.Outlined.Stop, contentDescription = "Stop")
-                            else Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                        IconButton(onClick = { showOptionsMenu = !showOptionsMenu }, modifier = Modifier.size(44.dp)) {
+                            Icon(
+                                if (showOptionsMenu) Icons.Default.Close else Icons.Default.Add,
+                                contentDescription = "Tools",
+                                tint = if (showOptionsMenu) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        TextField(
+                            value = inputText,
+                            onValueChange = { inputText = it },
+                            placeholder = {
+                                Text(if (questionerState.awaitingAnswer) "Type your answer" else "Message")
+                            },
+                            modifier = Modifier.weight(1f),
+                            maxLines = 5,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                            keyboardActions = KeyboardActions(onSend = {
+                                if (inputText.isNotBlank()) {
+                                    if (questionerState.awaitingAnswer) onSubmitAnswer(inputText.trim())
+                                    else onSendMessage(inputText.trim())
+                                    inputText = ""
+                                }
+                            }),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                disabledIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                            )
+                        )
+
+                        Spacer(Modifier.width(4.dp))
+
+                        FloatingActionButton(
+                            onClick = {
+                                if (isStreaming) onStopStreaming()
+                                else if (inputText.isNotBlank()) {
+                                    if (questionerState.awaitingAnswer) onSubmitAnswer(inputText.trim())
+                                    else onSendMessage(inputText.trim())
+                                    inputText = ""
+                                }
+                            },
+                            containerColor = if (isStreaming) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                            contentColor = if (isStreaming) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(40.dp),
+                            shape = CircleShape
+                        ) {
+                            AnimatedContent(targetState = isStreaming, label = "sendStop") { streaming ->
+                                if (streaming) Icon(Icons.Outlined.Stop, contentDescription = "Stop", modifier = Modifier.size(20.dp))
+                                else Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+private data class NotebookAction(
+    val label: String,
+    val description: String,
+    val icon: ImageVector,
+    val prompt: String
+)
+
+private fun notebookActions(documentTitle: String): List<NotebookAction> = listOf(
+    NotebookAction(
+        label = "Briefing Doc",
+        description = "Source summary",
+        icon = Icons.Default.Description,
+        prompt = """
+            Create a NotebookLM-style briefing document for "$documentTitle".
+            Include:
+            - Source overview
+            - Main ideas and claims
+            - Key facts, names, dates, formulas, or terms
+            - Important short quotes or exact phrases from the source
+            - Open questions or unclear areas
+            - Five high-signal takeaways
+        """.trimIndent()
+    ),
+    NotebookAction(
+        label = "Study Guide",
+        description = "Learn this source",
+        icon = Icons.Default.School,
+        prompt = """
+            Turn "$documentTitle" into a study guide.
+            Include:
+            - Learning objectives
+            - Section-by-section explanation
+            - Key terms with simple definitions
+            - Common misconceptions
+            - Practice questions with answers
+            Keep everything grounded in the source.
+        """.trimIndent()
+    ),
+    NotebookAction(
+        label = "FAQ",
+        description = "Likely questions",
+        icon = Icons.AutoMirrored.Filled.Help,
+        prompt = """
+            Create a source-grounded FAQ for "$documentTitle".
+            Write the questions a student is most likely to ask, then answer them clearly.
+            If the source does not contain enough evidence for an answer, say that directly.
+        """.trimIndent()
+    ),
+    NotebookAction(
+        label = "Source Map",
+        description = "Structure and links",
+        icon = Icons.Default.Search,
+        prompt = """
+            Map the structure of "$documentTitle".
+            Identify the major topics, how they connect, dependencies between ideas, and the best reading order.
+            If the source includes events or dates, add a timeline. Otherwise, add a concept map in markdown.
+        """.trimIndent()
+    ),
+    NotebookAction(
+        label = "Timeline",
+        description = "Events and sequence",
+        icon = Icons.Default.Timeline,
+        prompt = """
+            Build a source-grounded timeline for "$documentTitle".
+            Include dates, phases, process steps, cause-and-effect links, and any missing chronology the source leaves unclear.
+            If the source is not historical, convert the material into a learning sequence with prerequisite ideas first.
+        """.trimIndent()
+    ),
+    NotebookAction(
+        label = "Audio Brief",
+        description = "Podcast-style script",
+        icon = Icons.Default.GraphicEq,
+        prompt = """
+            Create a NotebookLM-style audio overview script for "$documentTitle".
+            Format it as a concise two-host discussion with host names, natural transitions, and source-grounded explanations.
+            Include a short version for a quick listen and a deeper version for review.
+        """.trimIndent()
+    ),
+    NotebookAction(
+        label = "Critique",
+        description = "Strengths and gaps",
+        icon = Icons.Default.RateReview,
+        prompt = """
+            Critique "$documentTitle" constructively.
+            Identify the strongest ideas, weak or unsupported claims, missing evidence, confusing structure, and ways to improve the material.
+            Keep every critique tied to details from the source.
+        """.trimIndent()
+    ),
+    NotebookAction(
+        label = "Debate",
+        description = "Two perspectives",
+        icon = Icons.Default.Groups,
+        prompt = """
+            Turn "$documentTitle" into a formal source-grounded debate.
+            Present two opposing perspectives, the best evidence each side can use from the source, rebuttals, and a balanced conclusion.
+        """.trimIndent()
+    ),
+    NotebookAction(
+        label = "Quote Finder",
+        description = "Evidence bank",
+        icon = Icons.Default.FormatQuote,
+        prompt = """
+            Create an evidence bank for "$documentTitle".
+            Pull the most important short source phrases, explain why each matters, and group them by topic.
+            Do not invent quotes; if exact wording is unavailable, label it as a paraphrase.
+        """.trimIndent()
+    )
+)
+
+@Composable
+private fun NotebookQuickActions(
+    actions: List<NotebookAction>,
+    enabled: Boolean,
+    onAction: (NotebookAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
+        items(actions, key = { it.label }) { action ->
+            AssistChip(
+                onClick = { onAction(action) },
+                enabled = enabled,
+                leadingIcon = {
+                    Icon(action.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                },
+                label = {
+                    Column {
+                        Text(action.label, style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            action.description,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun NotebookPromptGrid(
+    actions: List<NotebookAction>,
+    enabled: Boolean,
+    onAction: (NotebookAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        actions.chunked(2).forEach { rowActions ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowActions.forEach { action ->
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 86.dp)
+                            .clickable(enabled = enabled) { onAction(action) },
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                action.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                action.label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                action.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+                if (rowActions.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Minimalist AI illustration for the empty chat state.
+ * Geometric teal shapes — no emoji, no external assets.
+ */
+@Composable
+private fun AiEmptyIllustration(modifier: Modifier = Modifier) {
+    val primary = MaterialTheme.colorScheme.primary
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+
+    Box(
+        modifier = modifier.size(96.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Outer ring
+        Surface(
+            modifier = Modifier.size(88.dp),
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = primaryContainer.copy(alpha = 0.4f),
+            border = BorderStroke(2.dp, primary.copy(alpha = 0.3f))
+        ) {}
+        // Inner circle
+        Surface(
+            modifier = Modifier.size(64.dp),
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = primary.copy(alpha = 0.15f)
+        ) {}
+        // AI icon — Sparkles
+        Icon(
+            Icons.Default.AutoAwesome,
+            contentDescription = null,
+            tint = primary,
+            modifier = Modifier.size(32.dp)
+        )
     }
 }
 
@@ -474,14 +840,25 @@ private fun BouncingDot(delay: Int) {
 
 @Composable
 private fun QuestionOptionsMenu(
+    notebookActions: List<NotebookAction>,
+    onNotebookAction: (NotebookAction) -> Unit,
     onGenerateFlashcards: () -> Unit,
     onGenerateQuiz: () -> Unit,
     onStartGuidedLearning: () -> Unit,
     onShowQuestionerConfig: () -> Unit,
     onNavigateFlashcards: () -> Unit,
     onNavigateQuizzes: () -> Unit,
+    onNavigateMatch: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Notebook", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp))
+        NotebookQuickActions(
+            actions = notebookActions,
+            enabled = true,
+            onAction = onNotebookAction,
+            modifier = Modifier.padding(horizontal = 0.dp)
+        )
+        HorizontalDivider()
         Text("Generate", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Card(modifier = Modifier.weight(1f).clickable(onClick = onGenerateFlashcards), shape = MaterialTheme.shapes.medium) {
@@ -493,28 +870,28 @@ private fun QuestionOptionsMenu(
             }
             Card(modifier = Modifier.weight(1f).clickable(onClick = onGenerateQuiz), shape = MaterialTheme.shapes.medium) {
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Help, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Column { Text("Quiz", style = MaterialTheme.typography.labelMedium); Text("From full document", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
             }
         }
         Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onStartGuidedLearning), shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))) {
             Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Column { Text("Guided Learning", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onTertiaryContainer);
-                    Text("AI teaches you everything", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)) }
+                Column { Text("Guided Learning", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer);
+                    Text("AI teaches you everything", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)) }
             }
         }
         Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onShowQuestionerConfig), shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))) {
             Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.QuestionAnswer, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.QuestionAnswer, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Column { Text("Questioner", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onErrorContainer);
-                    Text("AI quizzes you on every topic", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)) }
+                Column { Text("Questioner", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer);
+                    Text("AI quizzes you on every topic", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)) }
             }
         }
         HorizontalDivider()
@@ -529,9 +906,19 @@ private fun QuestionOptionsMenu(
             }
             Card(modifier = Modifier.weight(1f).clickable(onClick = onNavigateQuizzes), shape = MaterialTheme.shapes.medium) {
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Help, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Column { Text("Quizzes", style = MaterialTheme.typography.labelMedium); Text("Self-check questions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onNavigateMatch), shape = MaterialTheme.shapes.medium) {
+            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Extension, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text("Match", style = MaterialTheme.typography.labelMedium)
+                    Text("Timed-style pairing practice from your flashcards", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -541,7 +928,7 @@ private fun QuestionOptionsMenu(
 @Composable
 private fun GeneratedFlashcardCard(count: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(modifier = modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.CardMembership, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
@@ -557,9 +944,9 @@ private fun GeneratedFlashcardCard(count: Int, onClick: () -> Unit, modifier: Mo
 @Composable
 private fun GeneratedQuizCard(count: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(modifier = modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f))) {
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Help, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text("$count Quiz Question${if (count != 1) "s" else ""} Generated", style = MaterialTheme.typography.labelLarge)

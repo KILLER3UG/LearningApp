@@ -14,6 +14,16 @@
 # Apache POI
 -keep class org.apache.poi.** { *; }
 -dontwarn org.apache.poi.**
+-dontwarn org.apache.xmlbeans.**
+-dontwarn org.openxmlformats.schemas.**
+-dontwarn com.graphbuilder.**
+-dontwarn javax.xml.stream.**
+-dontwarn java.awt.**
+-dontwarn net.sf.saxon.**
+-dontwarn org.apache.logging.log4j.**
+-dontwarn aQute.bnd.annotation.spi.**
+-dontwarn org.osgi.framework.**
+-dontwarn org.jspecify.annotations.**
 # EpubLib
 -keep class nl.siegmann.epublib.** { *; }
 # ML Kit

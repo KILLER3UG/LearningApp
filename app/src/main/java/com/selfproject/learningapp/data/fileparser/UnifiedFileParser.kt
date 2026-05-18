@@ -9,11 +9,15 @@ import android.net.Uri
  */
 class UnifiedFileParser(
     private val parsers: List<FileParser> = listOf(
+        PdfFileParser(),
         ImageFileParser(),
         DocxFileParser(),
+        PptxFileParser(),
+        SpreadsheetFileParser(),
         EpubFileParser(),
         HtmlFileParser(),
-        PlainTextFileParser() // also handles Markdown and PDF (basic fallback)
+        RtfFileParser(),
+        PlainTextFileParser()
     )
 ) {
     private val parserMap: Map<FileType, FileParser> by lazy {
@@ -22,12 +26,13 @@ class UnifiedFileParser(
 
     /**
      * Parses a file from a SAF URI and returns plain text.
-     * Falls back to PlainTextFileParser for unknown types.
+     * Falls back to PlainTextFileParser for textual types without a specialized parser.
      */
     suspend fun parse(uri: Uri, context: Context): FileParseResult {
         val mime = context.contentResolver.getType(uri)
         val fileType = FileType.fromMimeOrExtension(mime, uri, context)
-        val parser = parserMap[fileType] ?: parserMap[FileType.PLAIN_TEXT]
+        val parser = parserMap[fileType]
+            ?: (if (fileType.isTextual) parserMap[FileType.PLAIN_TEXT] else null)
             ?: return FileParseResult.Error("No parser available for file type: ${fileType.displayName}")
 
         return try {

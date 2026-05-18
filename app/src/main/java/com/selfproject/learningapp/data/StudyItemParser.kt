@@ -37,10 +37,11 @@ object StudyItemParser {
                 } else {
                     trimmed.substringAfter(".").trim()
                 }
+                val question = currentQuestion ?: continue
                 flashcards.add(
                     FlashcardEntity(
                         documentUri = documentUri,
-                        question = currentQuestion!!,
+                        question = question,
                         answer = answer,
                     )
                 )
@@ -71,13 +72,15 @@ object StudyItemParser {
         var inExplanation = false
 
         fun flushCurrent() {
-            if (currentQuestion != null && currentAnswer != null) {
+            val question = currentQuestion
+            val answer = currentAnswer
+            if (question != null && answer != null) {
                 quizzes.add(
                     QuizEntity(
                         documentUri = documentUri,
                         sourceText = sourceText,
-                        question = currentQuestion!!,
-                        answer = currentAnswer!!,
+                        question = question,
+                        answer = answer,
                         explanation = currentExplanation.toString().trim(),
                     )
                 )
@@ -90,17 +93,14 @@ object StudyItemParser {
 
         for (line in lines) {
             val trimmed = line.trim()
+            if (trimmed.isBlank()) continue
 
             // New question
             if (trimmed.matches(Regex("Q\\d*[:.)].*")) || trimmed == "Q:") {
                 flushCurrent()
-                currentQuestion = trimmed.substringAfter(":").trim()
-            } else if (trimmed.startsWith("A:") || trimmed.startsWith("Answer:")) {
-                if (trimmed.startsWith("A:")) {
-                    currentAnswer = trimmed.substringAfter(":").trim()
-                } else {
-                    currentAnswer = trimmed.substringAfter(":").trim()
-                }
+                currentQuestion = trimmed.replaceFirst(Regex("^Q\\d*\\s*[:.)]\\s*"), "").trim()
+            } else if (trimmed.matches(Regex("(?i)^(A|Answer)\\s*[:.)].*"))) {
+                currentAnswer = trimmed.replaceFirst(Regex("(?i)^(A|Answer)\\s*[:.)]\\s*"), "").trim()
                 inExplanation = false
             } else if (trimmed.lowercase().startsWith("explanation") ||
                 trimmed.lowercase().startsWith("why") ||

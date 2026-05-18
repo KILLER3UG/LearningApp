@@ -1,7 +1,6 @@
 package com.selfproject.learningapp.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,7 +46,7 @@ fun StudyComposer(
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp,
+        shadowElevation = 0.dp,
         tonalElevation = 0.dp
     ) {
         Column(
@@ -87,7 +86,6 @@ fun StudyComposer(
                         .size(44.dp)
                         .semantics { contentDescription = "Attach file" }
                         .clip(CircleShape)
-                        .clickable(onClick = onAttach)
                 ) {
                     Icon(
                         Icons.Default.AttachFile,

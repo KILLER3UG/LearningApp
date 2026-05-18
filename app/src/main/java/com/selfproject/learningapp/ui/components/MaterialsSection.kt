@@ -118,7 +118,8 @@ private fun materialFileIcon(fileType: FileType) = when (fileType) {
     FileType.PDF      -> Icons.Default.Description
     FileType.DOC,
     FileType.DOCX     -> Icons.Default.Description
-    FileType.PPTX     -> Icons.Default.TableChart
+    FileType.PPTX,
+    FileType.XLSX     -> Icons.Default.TableChart
     FileType.EPUB,
     FileType.HTML,
     FileType.RTF,
@@ -141,6 +142,7 @@ private fun materialFileIcon(fileType: FileType) = when (fileType) {
 }
 
 private fun formatAttachmentSize(bytes: Long): String = when {
+    bytes <= 0 -> "Unknown size"
     bytes < 1024 -> "$bytes B"
     bytes < 1024 * 1024 -> "${bytes / 1024} KB"
     else -> "%.1f MB".format(bytes / (1024.0 * 1024.0))

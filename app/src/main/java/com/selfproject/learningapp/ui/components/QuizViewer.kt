@@ -48,7 +48,7 @@ fun QuizViewer(
                 }
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             if (quizzes.isEmpty()) {
                 Text(
@@ -101,8 +101,8 @@ private fun QuizItem(
             .padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = when (state) {
-                QuizAnswerState.Correct -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                QuizAnswerState.Incorrect -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                QuizAnswerState.Correct -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                QuizAnswerState.Incorrect -> MaterialTheme.colorScheme.surfaceVariant
                 QuizAnswerState.Unanswered -> MaterialTheme.colorScheme.surfaceVariant
             }
         )
@@ -117,8 +117,8 @@ private fun QuizItem(
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp))
+                IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -130,7 +130,7 @@ private fun QuizItem(
             } else if (showAnswer || state != QuizAnswerState.Unanswered) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Answer: ${quiz.answer}",
+                    text = quiz.answer,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -146,14 +146,21 @@ private fun QuizItem(
                     Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(onClick = { onAnswer(false) }) {
-                            Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                        OutlinedButton(onClick = { onAnswer(false) }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("Wrong")
                         }
-                        Button(onClick = { onAnswer(true) }) {
+                        Button(
+                            onClick = { onAnswer(true) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("Correct")
@@ -162,12 +169,12 @@ private fun QuizItem(
                 } else {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = if (state == QuizAnswerState.Correct) "✓ Correct" else "✗ Incorrect",
+                        text = if (state == QuizAnswerState.Correct) "Correct" else "Incorrect",
                         style = MaterialTheme.typography.labelMedium,
                         color = if (state == QuizAnswerState.Correct)
                             MaterialTheme.colorScheme.primary
                         else
-                            MaterialTheme.colorScheme.error
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
